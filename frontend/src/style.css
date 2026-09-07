@@ -1,0 +1,323 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #f4f7fb;
+  color: #1f2937;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+/* AUTH */
+
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 430px;
+  background: white;
+  padding: 32px;
+  border-radius: 14px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+}
+
+.auth-card h1 {
+  margin-top: 0;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.subtitle {
+  text-align: center;
+  color: #6b7280;
+  margin-bottom: 25px;
+}
+
+/* FORMS */
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+label {
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+input,
+textarea,
+select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  outline: none;
+  background: white;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+textarea {
+  resize: vertical;
+}
+
+button[type="submit"] {
+  margin-top: 12px;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 8px;
+  background: #2563eb;
+  color: white;
+  font-weight: 600;
+}
+
+button[type="submit"]:hover {
+  background: #1d4ed8;
+}
+
+.link-button {
+  border: none;
+  background: none;
+  color: #2563eb;
+  font-weight: 600;
+  padding: 0;
+}
+
+.auth-switch {
+  text-align: center;
+  margin-top: 20px;
+}
+
+/* MESSAGES */
+
+.error-box {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+}
+
+.success-box {
+  background: #dcfce7;
+  color: #166534;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+}
+
+/* NAVBAR */
+
+.navbar {
+  background: white;
+  padding: 20px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+
+.navbar h1 {
+  margin: 0 0 5px;
+}
+
+.navbar p {
+  margin: 0;
+  color: #6b7280;
+}
+
+.user-area {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  font-weight: 600;
+}
+
+.logout-button {
+  border: none;
+  padding: 9px 15px;
+  border-radius: 7px;
+  background: #ef4444;
+  color: white;
+}
+
+.logout-button:hover {
+  background: #dc2626;
+}
+
+/* DASHBOARD */
+
+.dashboard {
+  width: 100%;
+  max-width: 1000px;
+  margin: 30px auto;
+  padding: 0 20px;
+}
+
+.panel {
+  background: white;
+  padding: 25px;
+  margin-bottom: 25px;
+  border-radius: 12px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.06);
+}
+
+.panel h2 {
+  margin-top: 0;
+}
+
+.secondary-button {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 7px;
+  background: #374151;
+  color: white;
+}
+
+.secondary-button:hover {
+  background: #1f2937;
+}
+
+.location-section {
+  margin-top: 15px;
+}
+
+.location-text {
+  color: #166534;
+  font-size: 14px;
+}
+
+/* REPORTS */
+
+.reports-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.report-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 18px;
+}
+
+.report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+}
+
+.report-header h3 {
+  margin: 0;
+}
+
+.report-card p {
+  line-height: 1.6;
+}
+
+.report-card small {
+  display: block;
+  color: #6b7280;
+  margin-top: 5px;
+}
+
+.status {
+  display: inline-block;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.status.reported {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status.acknowledged {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status.progress {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.status.resolved {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.report-image {
+  display: block;
+  max-width: 300px;
+  max-height: 250px;
+  margin-top: 15px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+/* LOADING */
+
+.loading-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* MOBILE */
+
+@media (max-width: 700px) {
+  .navbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .user-area {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .auth-card {
+    padding: 22px;
+  }
+
+  .report-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
