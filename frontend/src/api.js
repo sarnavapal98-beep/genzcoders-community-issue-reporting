@@ -1,93 +1,100 @@
-import axios from "axios";
+// Small fetch wrapper. Keeping the API paths relative means the same
+// frontend works locally (through Vite's proxy) and in production when
+// Flask serves the built frontend from the same origin.
 
-// Use relative API path so it works both locally and on Render
 const API_BASE_URL = "/api";
 
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  withCredentials: true,
-});
+const request = async (path, options = {}) => {
+  const config = {
+    credentials: "include",
+    ...options,
+    headers: {
+      ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+      ...(options.headers || {}),
+    },
+  };
 
-// -------------------------
-// Authentication
-// -------------------------
+  const response = await fetch(`${API_BASE_URL}${path}`, config);
 
-export const registerUser = (data) => {
-  return api.post("/auth/register", data);
+  let data = null;
+  const contentType = response.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    data = await response.json();
+  } else {
+    data = await response.text();
+  }
+
+  if (!response.ok) {
+    const error = new Error(
+      data?.message || `Request failed with status ${response.status}`
+    );
+    error.response = { status: response.status, data };
+    throw error;
+  }
+
+  return { data, status: response.status, headers: response.headers };
 };
 
-export const loginUser = (data) => {
-  return api.post("/auth/login", data);
-};
+export const registerUser = (data) =>
+  request("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
 
-export const logoutUser = () => {
-  return api.post("/auth/logout");
-};
+export const loginUser = (data) =>
+  request("/auth/login", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
 
-export const getCurrentUser = () => {
-  return api.get("/auth/me");
-};
+export const logoutUser = () =>
+  request("/auth/logout", { method: "POST" });
 
-// -------------------------
-// Categories
-// -------------------------
+export const getCurrentUser = () => request("/auth/me");
 
-export const getCategories = () => {
-  return api.get("/categories");
-};
+export const getCategories = () => request("/categories");
 
-// -------------------------
-// Departments
-// -------------------------
+export const getDepartments = () => request("/departments");
 
-export const getDepartments = () => {
-  return api.get("/departments");
-};
-
-// -------------------------
-// Reports
-// -------------------------
-
-export const getMyReports = () => {
-  return api.get("/me/reports");
-};
+export const getMyReports = () => request("/me/reports");
 
 export const getReports = (params = {}) => {
-  return api.get("/reports", {
-    params,
+  const query = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      query.set(key, value);
+    }
   });
+
+  const suffix = query.toString() ? `?${query.toString()}` : "";
+  return request(`/reports${suffix}`);
 };
 
-export const getDepartmentReports = (departmentId) => {
-  return api.get(`/departments/${departmentId}/reports`);
-};
+export const getDepartmentReports = (departmentId) =>
+  request(`/departments/${departmentId}/reports`);
 
-export const updateReport = (reportId, data) => {
-  return api.patch(`/reports/${reportId}`, data);
-};
-
-// -------------------------
-// AI / ML Prediction
-// -------------------------
+export const updateReport = (reportId, data) =>
+  request(`/reports/${reportId}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
 
 export const predictIssue = (imageFile) => {
   const formData = new FormData();
-
   formData.append("image", imageFile);
 
-  return api.post("/ml/predict", formData);
+  return request("/ml/predict", {
+    method: "POST",
+    body: formData,
+  });
 };
 
-// -------------------------
-// Create Report
-// -------------------------
+export const createReport = (formData) =>
+  request("/reports", {
+    method: "POST",
+    body: formData,
+  });
 
-export const createReport = (formData) => {
-  return api.post("/reports", formData);
-};
-
-// -------------------------
-// Export Axios instance
-// -------------------------
-
-export default api;
+export default { request };

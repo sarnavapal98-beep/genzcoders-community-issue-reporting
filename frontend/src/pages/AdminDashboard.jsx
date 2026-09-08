@@ -4,7 +4,7 @@ import {
   getDepartments,
   updateReport,
 } from "../api";
-import { useAuth } from "../AuthContext";
+import { useAuth } from "../AuthContext.jsx";
 
 const AdminDashboard = () => {
   const { user } = useAuth();

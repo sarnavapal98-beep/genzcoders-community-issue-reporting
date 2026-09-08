@@ -23,17 +23,32 @@ from db import get_db_connection, setup_database
 # ML IMPORT
 # =========================================================
 
-try:
-    from ml.predictor import predictor
-    ML_AVAILABLE = True
+# Load the ML model lazily. Loading torch/EfficientNet during web-server
+# startup can make a small hosted instance fail before the site is available.
+predictor = None
+ML_AVAILABLE = None
 
-except Exception as error:
-    predictor = None
-    ML_AVAILABLE = False
 
-    print("ML predictor could not be loaded:")
-    print("Error type:", type(error).__name__)
-    print("Error:", repr(error))
+def get_ml_predictor():
+    global predictor, ML_AVAILABLE
+
+    if predictor is not None:
+        return predictor
+
+    if ML_AVAILABLE is False:
+        return None
+
+    try:
+        from ml.predictor import predictor as loaded_predictor
+        predictor = loaded_predictor
+        ML_AVAILABLE = True
+        return predictor
+    except Exception as error:
+        ML_AVAILABLE = False
+        print("ML predictor could not be loaded:")
+        print("Error type:", type(error).__name__)
+        print("Error:", repr(error))
+        return None
 
 
 # =========================================================
@@ -345,7 +360,7 @@ def health():
         "success": True,
         "status": "healthy",
         "message": "Backend is running.",
-        "ml_available": ML_AVAILABLE
+        "ml_available": ML_AVAILABLE if ML_AVAILABLE is not None else "not_loaded"
     })
 
 
@@ -734,19 +749,16 @@ def ml_predict():
     # CHECK ML MODEL
     # -----------------------------------------------------
 
-    if not ML_AVAILABLE or predictor is None:
+    ml_predictor = get_ml_predictor()
 
+    if ml_predictor is None:
         return jsonify({
-
             "success": False,
-
             "message": (
                 "ML predictor is not available. "
-                "Check backend/ml/predictor.py "
-                "and model files."
+                "Check backend/ml/predictor.py and model files."
             )
-
-        }), 500
+        }), 503
 
     # -----------------------------------------------------
     # CHECK IMAGE
@@ -810,7 +822,7 @@ def ml_predict():
         # RUN MODEL
         # -------------------------------------------------
 
-        predictions = predictor.predict(
+        predictions = ml_predictor.predict(
             temp_path,
             top_k=3
         )
