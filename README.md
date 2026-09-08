@@ -32,5 +32,4 @@ npm run dev
 The Vite development server proxies `/api` and `/uploads` to Flask on port 5000.
 
 ## Important
-
-SQLite and uploaded files are stored on the server filesystem. On hosted platforms with ephemeral disks, those files can be lost when the service is redeployed/restarted. For persistent production data, use a managed database and object storage.
+Data and uploaded files are stored on the server filesystem. On hosted platforms with ephemeral disks, those files can be lost when the service is redeployed/restarted. For persistent production data, use a managed database and object storage.
