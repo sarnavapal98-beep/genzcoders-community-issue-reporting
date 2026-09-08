@@ -92,26 +92,29 @@ const MyReports = () => {
   };
 
   const getPhotoUrl = (report) => {
-    const photo =
-      report.photo_url ||
-      report.photo ||
-      report.image_url ||
-      report.PhotoURL;
+  const photo =
+    report.photo_url ||
+    report.photo ||
+    report.image_url ||
+    report.PhotoURL;
 
-    if (!photo) {
-      return null;
-    }
+  if (!photo) {
+    return null;
+  }
 
-    if (photo.startsWith("http://") || photo.startsWith("https://")) {
-      return photo;
-    }
+  if (
+    photo.startsWith("http://") ||
+    photo.startsWith("https://")
+  ) {
+    return photo;
+  }
 
-    if (photo.startsWith("/")) {
-      return `http://127.0.0.1:5000${photo}`;
-    }
+  if (photo.startsWith("/")) {
+    return photo;
+  }
 
-    return `http://127.0.0.1:5000/${photo}`;
-  };
+  return `/${photo}`;
+};
 
   const formatDate = (dateValue) => {
     if (!dateValue) {
