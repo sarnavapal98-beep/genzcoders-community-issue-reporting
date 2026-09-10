@@ -102,7 +102,9 @@ class MLPredictor:
 
         checkpoint = torch.load(
             self.model_path,
-            map_location=self.device
+            map_location=self.device,
+            weights_only=True,
+            mmap=True
         )
 
         # =================================================

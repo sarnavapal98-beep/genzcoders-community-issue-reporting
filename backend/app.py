@@ -2,6 +2,9 @@ import os
 import sqlite3
 import uuid
 import tempfile
+import subprocess
+import sys
+import json
 from functools import wraps
 
 from flask import (
@@ -20,38 +23,14 @@ from db import get_db_connection, setup_database
 
 
 # =========================================================
-# ML IMPORT
+# ML CONFIGURATION
 # =========================================================
-
-# Load the ML model lazily. Loading torch/EfficientNet during web-server
-# startup can make a small hosted instance fail before the site is available.
-predictor = None
-ML_AVAILABLE = None
-
-
-def get_ml_predictor():
-    global predictor, ML_AVAILABLE
-
-    if predictor is not None:
-        return predictor
-
-    if ML_AVAILABLE is False:
-        return None
-
-    try:
-        from ml.predictor import predictor as loaded_predictor
-        predictor = loaded_predictor
-        ML_AVAILABLE = True
-        return predictor
-    except Exception as error:
-        ML_AVAILABLE = False
-        print("ML predictor could not be loaded:")
-        print("Error type:", type(error).__name__)
-        print("Error:", repr(error))
-        return None
+# EfficientNet inference runs in a short-lived subprocess so the Flask/Gunicorn
+# worker does not retain PyTorch's large memory footprint.
+ML_WORKER_TIMEOUT = int(os.environ.get("ML_WORKER_TIMEOUT", "60"))
+ML_AVAILABLE = "subprocess"
 
 
-# =========================================================
 # APP CONFIGURATION
 # =========================================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -744,294 +723,117 @@ def get_categories():
     methods=["POST"]
 )
 def ml_predict():
-
-    # -----------------------------------------------------
-    # CHECK ML MODEL
-    # -----------------------------------------------------
-
-    ml_predictor = get_ml_predictor()
-
-    if ml_predictor is None:
-        return jsonify({
-            "success": False,
-            "message": (
-                "ML predictor is not available. "
-                "Check backend/ml/predictor.py and model files."
-            )
-        }), 503
-
-    # -----------------------------------------------------
-    # CHECK IMAGE
-    # -----------------------------------------------------
-
     if "image" not in request.files:
-
-        return jsonify({
-            "success": False,
-            "message": "No image uploaded."
-        }), 400
+        return jsonify({"success": False, "message": "No image uploaded."}), 400
 
     image = request.files["image"]
-
     if not image or not image.filename:
-
-        return jsonify({
-            "success": False,
-            "message": "No image selected."
-        }), 400
-
-    # -----------------------------------------------------
-    # CHECK EXTENSION
-    # -----------------------------------------------------
+        return jsonify({"success": False, "message": "No image selected."}), 400
 
     if not allowed_file(image.filename):
-
         return jsonify({
-
             "success": False,
-
-            "message": (
-                "Only JPG, JPEG and PNG images are allowed."
-            )
-
+            "message": "Only JPG, JPEG and PNG images are allowed."
         }), 400
 
-    extension = image.filename.rsplit(
-        ".",
-        1
-    )[1].lower()
-
+    extension = image.filename.rsplit(".", 1)[1].lower()
     temp_path = None
 
     try:
-
-        # -------------------------------------------------
-        # CREATE TEMPORARY IMAGE
-        # -------------------------------------------------
-
-        with tempfile.NamedTemporaryFile(
-            delete=False,
-            suffix=f".{extension}"
-        ) as temp_file:
-
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{extension}") as temp_file:
             temp_path = temp_file.name
-
             image.save(temp_path)
 
-        # -------------------------------------------------
-        # RUN MODEL
-        # -------------------------------------------------
+        worker_path = os.path.join(BASE_DIR, "ml", "predict_worker.py")
+        env = os.environ.copy()
+        env.setdefault("OMP_NUM_THREADS", "1")
+        env.setdefault("MKL_NUM_THREADS", "1")
+        env.setdefault("OPENBLAS_NUM_THREADS", "1")
 
-        predictions = ml_predictor.predict(
-            temp_path,
-            top_k=3
+        completed = subprocess.run(
+            [sys.executable, worker_path, temp_path],
+            capture_output=True,
+            text=True,
+            timeout=ML_WORKER_TIMEOUT,
+            env=env
         )
 
-        if not predictions:
-
+        if completed.returncode != 0:
+            print("ML worker failed:")
+            print(completed.stderr[-4000:])
             return jsonify({
-
                 "success": False,
+                "message": "The ML model could not analyse this image.",
+                "error": completed.stderr[-1000:]
+            }), 503
 
-                "message": (
-                    "The model could not make a prediction."
-                )
+        try:
+            worker_result = json.loads(completed.stdout.strip())
+        except json.JSONDecodeError as error:
+            print("Invalid ML worker response:", repr(error))
+            print("Worker stdout:", completed.stdout[-2000:])
+            print("Worker stderr:", completed.stderr[-2000:])
+            return jsonify({
+                "success": False,
+                "message": "The ML worker returned an invalid response."
+            }), 503
 
+        predictions = worker_result.get("predictions", [])
+        if not predictions:
+            return jsonify({
+                "success": False,
+                "message": "The model could not make a prediction."
             }), 500
-
-        # -------------------------------------------------
-        # BEST PREDICTION
-        # -------------------------------------------------
 
         best_prediction = predictions[0]
-
-        # Safety check in case predictor returns
-        # an unexpected format.
-
-        if not isinstance(
-            best_prediction,
-            dict
-        ):
-
-            raise TypeError(
-                "Predictor returned an invalid prediction format."
-            )
-
-        predicted_class = best_prediction.get(
-            "class"
-        )
-
-        confidence = float(
-            best_prediction.get(
-                "confidence",
-                0
-            )
-        )
+        predicted_class = best_prediction.get("class")
+        confidence = float(best_prediction.get("confidence", 0))
 
         if not predicted_class:
-
             return jsonify({
-
                 "success": False,
-
-                "message": (
-                    "The ML predictor returned "
-                    "an invalid result."
-                )
-
+                "message": "The ML predictor returned an invalid result."
             }), 500
 
-        # -------------------------------------------------
-        # NORMALIZE CONFIDENCE
-        # -------------------------------------------------
-
         if confidence > 1:
+            confidence /= 100.0
 
-            confidence = (
-                confidence / 100.0
-            )
-
-        confidence = max(
-            0.0,
-            min(
-                1.0,
-                confidence
-            )
-        )
-
-        # -------------------------------------------------
-        # LOW CONFIDENCE HANDLING
-        # -------------------------------------------------
-
-        requires_confirmation = (
-            confidence < 0.60
-        )
-
-        # -------------------------------------------------
-        # RETURN RESULT
-        # -------------------------------------------------
+        confidence = max(0.0, min(1.0, confidence))
+        confidence_percentage = round(confidence * 100, 2)
 
         return jsonify({
-
-            "success":
-                True,
-
-            "suggested_category":
-                predicted_class,
-
-            "confidence":
-                round(
-                    confidence,
-                    4
-                ),
-
-            "confidence_percentage":
-                round(
-                    confidence * 100,
-                    2
-                ),
-
-            "requires_confirmation":
-                requires_confirmation,
-
-            "predictions":
-                predictions
-
+            "success": True,
+            "suggested_category": predicted_class,
+            "confidence": round(confidence, 4),
+            "confidence_percentage": confidence_percentage,
+            "requires_confirmation": confidence < 0.60,
+            "predictions": predictions,
+            "prediction": {
+                "category": predicted_class,
+                "confidence": confidence_percentage
+            },
+            "top_predictions": predictions
         }), 200
 
-    # =====================================================
-    # MODEL FILE ERROR
-    # =====================================================
-
-    except FileNotFoundError as error:
-
-        print()
-        print("========== ML FILE ERROR ==========")
-        print(
-            "Error type:",
-            type(error).__name__
-        )
-        print(
-            "Error:",
-            repr(error)
-        )
-        print("====================================")
-        print()
-
+    except subprocess.TimeoutExpired:
+        print("ML worker timed out after", ML_WORKER_TIMEOUT, "seconds.")
         return jsonify({
-
-            "success":
-                False,
-
-            "message":
-                "ML model files could not be found.",
-
-            "error":
-                str(error)
-
-        }), 500
-
-    # =====================================================
-    # DETAILED ML ERROR
-    # =====================================================
+            "success": False,
+            "message": "ML prediction timed out. The model needs more compute resources."
+        }), 504
 
     except Exception as error:
-
-        import traceback
-
-        print()
-        print(
-            "========== ML PREDICTION ERROR =========="
-        )
-        print(
-            "Error type:",
-            type(error).__name__
-        )
-        print(
-            "Error:",
-            repr(error)
-        )
-
-        traceback.print_exc()
-
-        print(
-            "=========================================="
-        )
-        print()
-
+        print("ML prediction error:", repr(error))
         return jsonify({
-
-            "success":
-                False,
-
-            "message":
-                "ML prediction failed.",
-
-            "error_type":
-                type(error).__name__,
-
-            "error":
-                repr(error)
-
+            "success": False,
+            "message": "Unable to run ML prediction.",
+            "error": str(error)
         }), 500
 
-    # =====================================================
-    # DELETE TEMPORARY IMAGE
-    # =====================================================
-
     finally:
-
-        if (
-            temp_path
-            and os.path.exists(temp_path)
-        ):
-
+        if temp_path:
             try:
-
-                os.remove(
-                    temp_path
-                )
-
+                os.remove(temp_path)
             except OSError:
                 pass
 

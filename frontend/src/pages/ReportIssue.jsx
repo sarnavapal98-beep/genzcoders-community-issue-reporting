@@ -47,6 +47,7 @@ function ReportIssue() {
     const [submitting, setSubmitting] = useState(false);
     const [successMessage, setSuccessMessage] = useState("");
     const [errorMessage, setErrorMessage] = useState("");
+    const [submittedReport, setSubmittedReport] = useState(null);
 
 
     // ==============================
@@ -187,6 +188,7 @@ function ReportIssue() {
 
         setErrorMessage("");
         setSuccessMessage("");
+        setSubmittedReport(null);
         setPrediction(null);
 
 
@@ -373,6 +375,7 @@ function ReportIssue() {
 
         setErrorMessage("");
         setSuccessMessage("");
+        setSubmittedReport(null);
 
 
         // ==============================
@@ -516,8 +519,11 @@ function ReportIssue() {
             // ==============================
 
             setSuccessMessage(
-                response.data?.message ||
-                "Report submitted successfully!"
+                "Your report has been made and submitted successfully."
+            );
+
+            setSubmittedReport(
+                response.data?.report || null
             );
 
 
@@ -621,9 +627,24 @@ function ReportIssue() {
 
             {successMessage && (
 
-                <div className="success-message">
+                <div className="success-message report-confirmation" role="status">
 
-                    {successMessage}
+                    <div className="confirmation-icon">✓</div>
+
+                    <div>
+                        <h2>Report Submitted Successfully</h2>
+                        <p>{successMessage}</p>
+
+                        {submittedReport?.ReportID && (
+                            <p className="confirmation-id">
+                                <strong>Report ID:</strong> {submittedReport.ReportID}
+                            </p>
+                        )}
+
+                        <p className="confirmation-note">
+                            Your report has been recorded and sent to the system for processing.
+                        </p>
+                    </div>
 
                 </div>
             )}
