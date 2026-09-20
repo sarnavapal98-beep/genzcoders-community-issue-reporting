@@ -1,0 +1,9 @@
+cardboard
+glass
+metal
+paper
+plastic
+pothole
+street light
+trash
+water leakage

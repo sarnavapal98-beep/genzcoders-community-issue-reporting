@@ -1,0 +1,15 @@
+               precision    recall  f1-score   support
+
+    cardboard       0.97      0.89      0.93        44
+        glass       0.75      0.89      0.81        37
+        metal       0.78      0.91      0.84        44
+        paper       0.94      0.83      0.88        54
+      plastic       0.87      0.72      0.79        47
+      pothole       0.99      0.97      0.98        88
+ street light       0.97      0.99      0.98        97
+        trash       0.65      0.71      0.68        21
+water leakage       0.77      0.91      0.83        11
+
+     accuracy                           0.90       443
+    macro avg       0.86      0.87      0.86       443
+ weighted avg       0.90      0.90      0.90       443

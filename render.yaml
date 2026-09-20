@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: community-issue-reporting
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
