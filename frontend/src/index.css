@@ -197,3 +197,120 @@ button:disabled { opacity:.6; cursor:not-allowed; transform:none!important; }
   .auth-brand h1 { font-size:38px; }
   .auth-card { padding:28px 22px; }
 }
+/* =========================================================
+   MY REPORTS - SEARCH & FILTERS
+   ========================================================= */
+
+.report-filters {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  padding: 18px;
+  border-radius: 16px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #e5e7eb);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+}
+
+.filter-search {
+  flex: 1;
+  min-width: 240px;
+}
+
+.filter-search input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border, #d1d5db);
+  background: #ffffff;
+  color: #111827;
+  font-size: 14px;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.filter-search input::placeholder {
+  color: #9ca3af;
+}
+
+.filter-search input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.filter-group {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.filter-group select {
+  min-width: 150px;
+  padding: 11px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border, #d1d5db);
+  background: #ffffff;
+  color: #111827;
+  font-size: 14px;
+  cursor: pointer;
+  outline: none;
+}
+
+.filter-group select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.filter-result-count {
+  margin: 0 0 20px 4px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.filter-result-count strong {
+  color: #111827;
+}
+
+/* Responsive filters */
+
+@media (max-width: 900px) {
+  .report-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-search {
+    width: 100%;
+  }
+
+  .filter-group {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+  }
+
+  .filter-group select {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .filter-group {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-group select,
+  .filter-group button {
+    width: 100%;
+  }
+
+  .report-filters {
+    padding: 14px;
+  }
+}

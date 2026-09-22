@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { getMyReports } from "../api";
 
@@ -6,6 +6,11 @@ const MyReports = () => {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Search and filter state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
 
   useEffect(() => {
     loadReports();
@@ -92,29 +97,29 @@ const MyReports = () => {
   };
 
   const getPhotoUrl = (report) => {
-  const photo =
-    report.photo_url ||
-    report.photo ||
-    report.image_url ||
-    report.PhotoURL;
+    const photo =
+      report.photo_url ||
+      report.photo ||
+      report.image_url ||
+      report.PhotoURL;
 
-  if (!photo) {
-    return null;
-  }
+    if (!photo) {
+      return null;
+    }
 
-  if (
-    photo.startsWith("http://") ||
-    photo.startsWith("https://")
-  ) {
-    return photo;
-  }
+    if (
+      photo.startsWith("http://") ||
+      photo.startsWith("https://")
+    ) {
+      return photo;
+    }
 
-  if (photo.startsWith("/")) {
-    return photo;
-  }
+    if (photo.startsWith("/")) {
+      return photo;
+    }
 
-  return `/${photo}`;
-};
+    return `/${photo}`;
+  };
 
   const formatDate = (dateValue) => {
     if (!dateValue) {
@@ -157,10 +162,92 @@ const MyReports = () => {
       report.lng;
 
     if (latitude !== undefined && longitude !== undefined) {
-      return `${Number(latitude).toFixed(5)}, ${Number(longitude).toFixed(5)}`;
+      return `${Number(latitude).toFixed(5)}, ${Number(longitude).toFixed(
+        5
+      )}`;
     }
 
     return "Location unavailable";
+  };
+
+  // Get unique categories for the category filter
+  const categories = useMemo(() => {
+    return [
+      ...new Set(
+        reports
+          .map((report) => getCategoryName(report))
+          .filter(
+            (category) =>
+              category &&
+              category.toString().trim() &&
+              category.toString().toLowerCase() !== "unknown"
+          )
+      ),
+    ];
+  }, [reports]);
+
+  // Filter reports based on search, status and category
+  const filteredReports = useMemo(() => {
+    const search = searchTerm.trim().toLowerCase();
+
+    return reports.filter((report) => {
+      const category = getCategoryName(report)
+        .toString()
+        .toLowerCase();
+
+      const description = getDescription(report)
+        .toString()
+        .toLowerCase();
+
+      const location = getLocationText(report)
+        .toString()
+        .toLowerCase();
+
+      const reportId = getReportId(report)
+        ?.toString()
+        .toLowerCase() || "";
+
+      const status = (
+        report.status ||
+        report.Status ||
+        "Reported"
+      )
+        .toString()
+        .toLowerCase()
+        .replace(/_/g, " ");
+
+      const matchesSearch =
+        !search ||
+        category.includes(search) ||
+        description.includes(search) ||
+        location.includes(search) ||
+        reportId.includes(search);
+
+      const matchesStatus =
+        statusFilter === "all" ||
+        status === statusFilter.toLowerCase();
+
+      const matchesCategory =
+        categoryFilter === "all" ||
+        category === categoryFilter.toLowerCase();
+
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesCategory
+      );
+    });
+  }, [
+    reports,
+    searchTerm,
+    statusFilter,
+    categoryFilter,
+  ]);
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setStatusFilter("all");
+    setCategoryFilter("all");
   };
 
   if (loading) {
@@ -183,7 +270,6 @@ const MyReports = () => {
 
   return (
     <div className="page-container">
-
       {/* Page Header */}
       <div className="page-header">
         <div>
@@ -204,6 +290,7 @@ const MyReports = () => {
           <strong>Unable to load reports.</strong>
           <br />
           {error}
+
           <button
             type="button"
             className="btn btn-secondary"
@@ -234,187 +321,274 @@ const MyReports = () => {
         </div>
       )}
 
-      {/* Reports */}
+      {/* Search and Filters */}
       {!error && reports.length > 0 && (
-        <div className="reports-grid">
+        <>
+          <div className="report-filters">
+            <div className="filter-search">
+              <input
+                type="text"
+                placeholder="Search reports by ID, category, description or location..."
+                value={searchTerm}
+                onChange={(event) =>
+                  setSearchTerm(event.target.value)
+                }
+                aria-label="Search reports"
+              />
+            </div>
 
-          {reports.map((report, index) => {
-            const reportId = getReportId(report);
-            const photoUrl = getPhotoUrl(report);
-            const status = report.status || report.Status || "Reported";
-            const category = getCategoryName(report);
-            const description = getDescription(report);
-            const location = getLocationText(report);
-
-            return (
-              <div
-                className="report-card"
-                key={reportId || index}
+            <div className="filter-group">
+              <select
+                value={statusFilter}
+                onChange={(event) =>
+                  setStatusFilter(event.target.value)
+                }
+                aria-label="Filter by status"
               >
+                <option value="all">All Statuses</option>
+                <option value="reported">Reported</option>
+                <option value="acknowledged">
+                  Acknowledged
+                </option>
+                <option value="in progress">
+                  In Progress
+                </option>
+                <option value="resolved">Resolved</option>
+              </select>
 
-                {/* Image */}
-                {photoUrl ? (
-                  <div className="report-card-image">
-                    <img
-                      src={photoUrl}
-                      alt={category}
-                      onError={(event) => {
-                        event.currentTarget.style.display = "none";
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <div className="report-card-image report-card-no-image">
-                    <span>No Image</span>
-                  </div>
-                )}
+              <select
+                value={categoryFilter}
+                onChange={(event) =>
+                  setCategoryFilter(event.target.value)
+                }
+                aria-label="Filter by category"
+              >
+                <option value="all">All Categories</option>
 
-                {/* Content */}
-                <div className="report-card-content">
+                {categories.map((category) => (
+                  <option
+                    key={category}
+                    value={category.toLowerCase()}
+                  >
+                    {category}
+                  </option>
+                ))}
+              </select>
 
-                  <div className="report-card-top">
-                    <div>
-                      <span className="report-category">
-                        {category}
-                      </span>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={clearFilters}
+              >
+                Clear Filters
+              </button>
+            </div>
+          </div>
 
-                      {reportId && (
-                        <span className="report-id">
-                          Report #{reportId}
-                        </span>
-                      )}
-                    </div>
+          {/* Filter Result Count */}
+          <div className="filter-result-count">
+            Showing{" "}
+            <strong>{filteredReports.length}</strong>{" "}
+            of <strong>{reports.length}</strong> reports
+          </div>
 
-                    <span
-                      className={`status-badge ${getStatusClass(
-                        status
-                      )}`}
-                    >
-                      {formatStatus(status)}
-                    </span>
-                  </div>
-
-                  <h3>{description}</h3>
-
-                  {/* Location */}
-                  <div className="report-card-detail">
-                    <span className="detail-label">
-                      Location
-                    </span>
-
-                    <span>
-                      {location}
-                    </span>
-                  </div>
-
-                  {/* Date */}
-                  <div className="report-card-detail">
-                    <span className="detail-label">
-                      Submitted
-                    </span>
-
-                    <span>
-                      {formatDate(
-                        report.date_submitted ||
-                          report.DateSubmitted ||
-                          report.created_at ||
-                          report.createdAt
-                      )}
-                    </span>
-                  </div>
-
-                  {/* Department */}
-                  {(report.department ||
-                    report.department_name ||
-                    report.DepartmentName) && (
-                    <div className="report-card-detail">
-                      <span className="detail-label">
-                        Department
-                      </span>
-
-                      <span>
-                        {report.department ||
-                          report.department_name ||
-                          report.DepartmentName}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Status Timeline */}
-                  <div className="status-timeline">
-
-                    <div
-                      className={`timeline-step ${
-                        [
-                          "reported",
-                          "acknowledged",
-                          "in progress",
-                          "resolved",
-                        ].includes(
-                          status.toLowerCase()
-                        )
-                          ? "active"
-                          : ""
-                      }`}
-                    >
-                      <span className="timeline-dot"></span>
-                      <span>Reported</span>
-                    </div>
-
-                    <div
-                      className={`timeline-step ${
-                        [
-                          "acknowledged",
-                          "in progress",
-                          "resolved",
-                        ].includes(
-                          status.toLowerCase()
-                        )
-                          ? "active"
-                          : ""
-                      }`}
-                    >
-                      <span className="timeline-dot"></span>
-                      <span>Acknowledged</span>
-                    </div>
-
-                    <div
-                      className={`timeline-step ${
-                        [
-                          "in progress",
-                          "resolved",
-                        ].includes(
-                          status.toLowerCase()
-                        )
-                          ? "active"
-                          : ""
-                      }`}
-                    >
-                      <span className="timeline-dot"></span>
-                      <span>In Progress</span>
-                    </div>
-
-                    <div
-                      className={`timeline-step ${
-                        status.toLowerCase() === "resolved"
-                          ? "active"
-                          : ""
-                      }`}
-                    >
-                      <span className="timeline-dot"></span>
-                      <span>Resolved</span>
-                    </div>
-
-                  </div>
-
-                </div>
+          {/* No Matching Results */}
+          {filteredReports.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">
+                🔎
               </div>
-            );
-          })}
 
-        </div>
+              <h2>No Matching Reports</h2>
+
+              <p>
+                No reports match your current search or filters.
+              </p>
+
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={clearFilters}
+              >
+                Clear Filters
+              </button>
+            </div>
+          ) : (
+            /* Reports */
+            <div className="reports-grid">
+              {filteredReports.map((report, index) => {
+                const reportId = getReportId(report);
+                const photoUrl = getPhotoUrl(report);
+                const status =
+                  report.status ||
+                  report.Status ||
+                  "Reported";
+                const category = getCategoryName(report);
+                const description = getDescription(report);
+                const location = getLocationText(report);
+
+                const normalizedStatus = status
+                  .toString()
+                  .toLowerCase()
+                  .replace(/_/g, " ");
+
+                return (
+                  <div
+                    className="report-card"
+                    key={reportId || index}
+                  >
+                    {/* Image */}
+                    {photoUrl ? (
+                      <div className="report-card-image">
+                        <img
+                          src={photoUrl}
+                          alt={category}
+                          onError={(event) => {
+                            event.currentTarget.style.display =
+                              "none";
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="report-card-image report-card-no-image">
+                        <span>No Image</span>
+                      </div>
+                    )}
+
+                    {/* Content */}
+                    <div className="report-card-content">
+                      <div className="report-card-top">
+                        <div>
+                          <span className="report-category">
+                            {category}
+                          </span>
+
+                          {reportId && (
+                            <span className="report-id">
+                              Report #{reportId}
+                            </span>
+                          )}
+                        </div>
+
+                        <span
+                          className={`status-badge ${getStatusClass(
+                            status
+                          )}`}
+                        >
+                          {formatStatus(status)}
+                        </span>
+                      </div>
+
+                      <h3>{description}</h3>
+
+                      {/* Location */}
+                      <div className="report-card-detail">
+                        <span className="detail-label">
+                          Location
+                        </span>
+
+                        <span>{location}</span>
+                      </div>
+
+                      {/* Date */}
+                      <div className="report-card-detail">
+                        <span className="detail-label">
+                          Submitted
+                        </span>
+
+                        <span>
+                          {formatDate(
+                            report.date_submitted ||
+                              report.DateSubmitted ||
+                              report.created_at ||
+                              report.createdAt
+                          )}
+                        </span>
+                      </div>
+
+                      {/* Department */}
+                      {(report.department ||
+                        report.department_name ||
+                        report.DepartmentName) && (
+                        <div className="report-card-detail">
+                          <span className="detail-label">
+                            Department
+                          </span>
+
+                          <span>
+                            {report.department ||
+                              report.department_name ||
+                              report.DepartmentName}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Status Timeline */}
+                      <div className="status-timeline">
+                        <div
+                          className={`timeline-step ${
+                            [
+                              "reported",
+                              "acknowledged",
+                              "in progress",
+                              "resolved",
+                            ].includes(normalizedStatus)
+                              ? "active"
+                              : ""
+                          }`}
+                        >
+                          <span className="timeline-dot"></span>
+                          <span>Reported</span>
+                        </div>
+
+                        <div
+                          className={`timeline-step ${
+                            [
+                              "acknowledged",
+                              "in progress",
+                              "resolved",
+                            ].includes(normalizedStatus)
+                              ? "active"
+                              : ""
+                          }`}
+                        >
+                          <span className="timeline-dot"></span>
+                          <span>Acknowledged</span>
+                        </div>
+
+                        <div
+                          className={`timeline-step ${
+                            [
+                              "in progress",
+                              "resolved",
+                            ].includes(normalizedStatus)
+                              ? "active"
+                              : ""
+                          }`}
+                        >
+                          <span className="timeline-dot"></span>
+                          <span>In Progress</span>
+                        </div>
+
+                        <div
+                          className={`timeline-step ${
+                            normalizedStatus === "resolved"
+                              ? "active"
+                              : ""
+                          }`}
+                        >
+                          <span className="timeline-dot"></span>
+                          <span>Resolved</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
-
     </div>
   );
 };
