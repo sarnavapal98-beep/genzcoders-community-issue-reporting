@@ -36,11 +36,10 @@ def get_db_connection():
 
 # ---------------------------------------------------------
 # INITIALIZE DATABASE
-# ---------------------------------------------------------
 
 def init_db():
     """
-    Create all database tables using schema.sql.
+       Create all database tables using schema.sql.
     """
 
     schema_path = os.path.join(BASE_DIR, "schema.sql")
