@@ -12,7 +12,6 @@ VALID_EXTENSIONS = {
     ".webp"
 }
 
-
 def analyze_dataset():
     print("=" * 70)
     print("COMMUNITY ISSUE REPORTING - DATASET ANALYSIS")
