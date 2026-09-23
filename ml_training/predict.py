@@ -6,26 +6,13 @@ import torch.nn as nn
 from torchvision import transforms, models
 from PIL import Image
 
-
-# ============================================================
 # PATHS
-# ============================================================
+
 
 # community-issue-reporting/
 PROJECT_DIR = os.path.dirname(
     os.path.dirname(os.path.abspath(__file__))
 )
-
-# ============================================================
-# IMPORTANT:
-# The new train.py saves the model here:
-#
-# community-issue-reporting/
-# └── backend/
-#     └── ml/
-#         ├── best_model.pth
-#         └── classes.txt
-# ============================================================
 
 MODEL_DIR = os.path.join(
     PROJECT_DIR,
@@ -46,10 +33,7 @@ CLASSES_PATH = os.path.join(
 
 IMAGE_SIZE = 224
 
-
-# ============================================================
 # DEVICE
-# ============================================================
 
 device = torch.device(
     "cuda"
