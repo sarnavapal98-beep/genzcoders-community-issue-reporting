@@ -8,7 +8,7 @@ This repository is configured so Render can build the React frontend and then st
 
 - Build: `pip install -r backend/requirements.txt && cd frontend && npm ci && npm run build`
 - Start: `gunicorn --chdir backend --bind 0.0.0.0:$PORT app:app`
-- The production API is relative to the same origin (`/api`), so no hard-coded localhost URL is used.
+- The producti0n API is relative to the same origin (`/api`), so no hard-coded localhost URL is used.
 - `render.yaml` contains the deployment configuration.
 
 ## Local development
