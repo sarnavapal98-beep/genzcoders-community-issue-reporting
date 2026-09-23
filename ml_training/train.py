@@ -17,9 +17,8 @@ import seaborn as sns
 from tqdm import tqdm
 
 
-# ============================================================
 # CONFIGURATION
-# ============================================================
+
 
 # IMPORTANT:
 # This folder must directly contain the 9 class folders.
@@ -38,7 +37,6 @@ BACKEND_ML_DIR = os.path.join(
     "backend",
     "ml"
 )
-
 os.makedirs(BACKEND_ML_DIR, exist_ok=True)
 
 MODEL_PATH = os.path.join(
