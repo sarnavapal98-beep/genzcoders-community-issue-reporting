@@ -33,3 +33,10 @@ The Vite development server proxies `/api` and `/uploads` to Flask on port 5000.
 
 ## Important
 Data and uploaded files are stored on the server filesystem. On hosted platforms with ephemeral disks, those files can be lost when the service is redeployed/restarted. For persistent production data, use a managed database and object storage.
+
+## Final Deployment
+
+The final integrated version of the Community Issue Reporting System has been tested locally and deployed through the project's existing Render deployment.
+
+Deployment URL:
+https://genzcoders-community-issue-reporting.onrender.com
