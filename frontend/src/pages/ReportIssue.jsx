@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 import {
     predictIssue,
     getCategories,
     createReport
 } from "../api";
+import { useAuth } from "../AuthContext.jsx";
+import { exportReportPDF } from "../utils/pdfGenerator.js";
 
 
 function ReportIssue() {
@@ -41,13 +44,15 @@ function ReportIssue() {
 
 
     // ==============================
-    // Submission State
+    // Submission State & Auth
     // ==============================
 
+    const { user } = useAuth();
     const [submitting, setSubmitting] = useState(false);
     const [successMessage, setSuccessMessage] = useState("");
     const [errorMessage, setErrorMessage] = useState("");
     const [submittedReport, setSubmittedReport] = useState(null);
+    const [copiedId, setCopiedId] = useState(false);
 
 
     // ==============================
@@ -587,6 +592,10 @@ function ReportIssue() {
     };
 
 
+    const uniqueTrackingId = submittedReport?.ReportID
+        ? `REP-${new Date().getFullYear()}-${String(submittedReport.ReportID).padStart(5, "0")}`
+        : "";
+
     // ==============================
     // Render
     // ==============================
@@ -622,32 +631,126 @@ function ReportIssue() {
 
 
             {/* ==============================
-                Success Message
+                Success Confirmation & PDF Option Card
             ============================== */}
 
-            {successMessage && (
+            {submittedReport ? (
+                <div className="report-success-card" role="status">
+                    <div className="success-card-top">
+                        <div className="confirmation-badge">
+                            <span className="confirmation-icon">✓</span>
+                            <div>
+                                <span className="confirmation-tag">Report Successfully Filed</span>
+                                <h2 className="confirmation-heading">Issue Logged In Civic Database</h2>
+                            </div>
+                        </div>
 
+                        <span className="confirmation-status-pill">
+                            ● {submittedReport.status || "Reported"}
+                        </span>
+                    </div>
+
+                    {/* Prominent Unique Tracking ID */}
+                    <div className="unique-tracking-box">
+                        <div className="tracking-meta">
+                            <span className="tracking-label">Official Unique Tracking ID Number</span>
+                            <div className="tracking-number-row">
+                                <span className="tracking-code">
+                                    {uniqueTrackingId || `#REP-${submittedReport.ReportID}`}
+                                </span>
+                                <button
+                                    type="button"
+                                    className="btn-copy-tracking"
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(uniqueTrackingId || `#REP-${submittedReport.ReportID}`);
+                                        setCopiedId(true);
+                                        setTimeout(() => setCopiedId(false), 2500);
+                                    }}
+                                    title="Copy Unique ID to clipboard"
+                                >
+                                    {copiedId ? "✓ Copied!" : "📋 Copy ID"}
+                                </button>
+                            </div>
+                            <span className="tracking-subtext">
+                                Issue Reference: #REP-{submittedReport.ReportID} • Keep this unique ID for official civic status inquiries.
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Summary Details Grid */}
+                    <div className="submitted-summary-grid">
+                        <div className="summary-card-cell">
+                            <span className="cell-label">Category</span>
+                            <span className="cell-value">{submittedReport.category || "Community Issue"}</span>
+                        </div>
+                        <div className="summary-card-cell">
+                            <span className="cell-label">Assigned Department</span>
+                            <span className="cell-value">{submittedReport.department || "Municipal Works"}</span>
+                        </div>
+                        <div className="summary-card-cell">
+                            <span className="cell-label">Reporter</span>
+                            <span className="cell-value">{user?.name || "Verified Citizen"}</span>
+                        </div>
+                        <div className="summary-card-cell">
+                            <span className="cell-label">Location</span>
+                            <span className="cell-value">
+                                {submittedReport.latitude && submittedReport.longitude
+                                    ? `${Number(submittedReport.latitude).toFixed(4)}, ${Number(submittedReport.longitude).toFixed(4)}`
+                                    : "GPS Recorded"}
+                            </span>
+                        </div>
+                    </div>
+
+                    {submittedReport.description && (
+                        <div className="submitted-desc-preview">
+                            <span className="desc-preview-label">Issue Summary</span>
+                            <p>{submittedReport.description}</p>
+                        </div>
+                    )}
+
+                    {/* PDF Export & Action Controls */}
+                    <div className="submission-actions-row">
+                        <button
+                            type="button"
+                            className="btn-download-pdf"
+                            onClick={() => exportReportPDF(submittedReport, user)}
+                        >
+                            <span className="pdf-icon">📥</span>
+                            <div className="btn-text-block">
+                                <span className="btn-main-text">Download PDF Summary</span>
+                                <span className="btn-sub-text">Save official municipal receipt with unique ID</span>
+                            </div>
+                        </button>
+
+                        <div className="secondary-actions-group">
+                            <Link to="/my-reports" className="btn-action-link">
+                                📋 My Reports
+                            </Link>
+                            <Link to="/community-reports" className="btn-action-link">
+                                🌐 Community Feed
+                            </Link>
+                            <button
+                                type="button"
+                                className="btn-reset-form"
+                                onClick={() => {
+                                    setSubmittedReport(null);
+                                    setSuccessMessage("");
+                                }}
+                            >
+                                + File Another Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ) : successMessage ? (
                 <div className="success-message report-confirmation" role="status">
-
                     <div className="confirmation-icon">✓</div>
-
                     <div>
                         <h2>Report Submitted Successfully</h2>
                         <p>{successMessage}</p>
-
-                        {submittedReport?.ReportID && (
-                            <p className="confirmation-id">
-                                <strong>Report ID:</strong> {submittedReport.ReportID}
-                            </p>
-                        )}
-
-                        <p className="confirmation-note">
-                            Your report has been recorded and sent to the system for processing.
-                        </p>
                     </div>
-
                 </div>
-            )}
+            ) : null}
 
 
             <form onSubmit={handleSubmit}>

@@ -5,9 +5,11 @@ import {
   updateReport,
 } from "../api";
 import { useAuth } from "../AuthContext.jsx";
+import { formatTrackingId, exportReportPDF } from "../utils/pdfGenerator.js";
 
 const AdminDashboard = () => {
   const { user } = useAuth();
+  const [copiedId, setCopiedId] = useState(null);
 
   const [reports, setReports] = useState([]);
   const [departments, setDepartments] = useState([]);
@@ -15,6 +17,7 @@ const AdminDashboard = () => {
   const [selectedDepartment, setSelectedDepartment] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
+  const [selectedSort, setSelectedSort] = useState("upvotes");
 
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
@@ -62,6 +65,10 @@ const AdminDashboard = () => {
         params.status = selectedStatus;
       }
 
+      if (selectedSort) {
+        params.sort = selectedSort;
+      }
+
       const response = await getReports(params);
       const data = response.data;
 
@@ -91,6 +98,7 @@ const AdminDashboard = () => {
     setSelectedDepartment("");
     setSelectedCategory("");
     setSelectedStatus("");
+    setSelectedSort("upvotes");
 
     setTimeout(() => {
       loadReports();
@@ -182,11 +190,11 @@ const AdminDashboard = () => {
     return photo;
   }
 
-  if (photo.startsWith("/")) {
-    return photo;
+  const cleanPath = photo.startsWith("/") ? photo : `/${photo}`;
+  if (typeof window !== "undefined" && window.location.port === "5500") {
+    return `http://127.0.0.1:5000${cleanPath}`;
   }
-
-  return `/${photo}`;
+  return cleanPath;
 };
   const getDate = (report) => {
     return (
@@ -403,6 +411,16 @@ const AdminDashboard = () => {
           </strong>
         </div>
 
+        <div className="summary-card stat-high-priority">
+          <span className="summary-label">
+            🔥 High Priority
+          </span>
+
+          <strong className="summary-number">
+            {reports.filter((r) => Number(r.upvotes || 0) >= 2).length}
+          </strong>
+        </div>
+
       </div>
 
       {/* Filters */}
@@ -565,6 +583,37 @@ const AdminDashboard = () => {
             </select>
           </div>
 
+          {/* Priority Sort */}
+          <div className="form-group">
+            <label
+              htmlFor="priority_order"
+              className="form-label"
+            >
+              Priority Order
+            </label>
+
+            <select
+              id="priority_order"
+              className="form-input"
+              value={selectedSort}
+              onChange={(event) =>
+                setSelectedSort(
+                  event.target.value
+                )
+              }
+            >
+              <option value="upvotes">
+                🔥 Most Upvoted (High Priority First)
+              </option>
+              <option value="newest">
+                🕒 Newest First
+              </option>
+              <option value="oldest">
+                ⏳ Oldest First
+              </option>
+            </select>
+          </div>
+
         </div>
 
         <div className="filter-actions">
@@ -661,18 +710,46 @@ const AdminDashboard = () => {
                   {/* Details */}
                   <div className="admin-report-details">
 
+                    {/* Prominent Unique Tracking ID Header */}
+                    <div className="card-tracking-header">
+                      <div className="tracking-id-pill" title="Official Unique Tracking ID Number">
+                        <span className="tracking-icon">🏷️</span>
+                        <span className="tracking-num">{formatTrackingId(report)}</span>
+                        <button
+                          type="button"
+                          className="btn-copy-mini"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(formatTrackingId(report));
+                            setCopiedId(reportId);
+                            setTimeout(() => setCopiedId(null), 2000);
+                          }}
+                          title="Copy Unique Tracking ID"
+                        >
+                          {copiedId === reportId ? "✓ Copied" : "Copy ID"}
+                        </button>
+                      </div>
+                      <div className="tracking-right-meta">
+                        {Number(report.upvotes || 0) > 0 ? (
+                          <span
+                            className={`priority-flag-pill ${Number(report.upvotes) >= 2 ? "high-priority" : ""}`}
+                            title={`${report.upvotes} citizen(s) have confirmed this exact issue`}
+                          >
+                            {Number(report.upvotes) >= 2 ? "🔥 High Priority" : "👥 Endorsed"} ({report.upvotes} {Number(report.upvotes) === 1 ? "Citizen" : "Citizens"})
+                          </span>
+                        ) : (
+                          <span className="report-zero-upvotes-badge">0 Upvotes</span>
+                        )}
+                        <span className="report-ref-badge">#REP-{reportId}</span>
+                      </div>
+                    </div>
+
                     <div className="admin-report-header">
 
                       <div>
                         <span className="report-category">
                           {category}
                         </span>
-
-                        {reportId && (
-                          <span className="report-id">
-                            Report #{reportId}
-                          </span>
-                        )}
                       </div>
 
                       <span
@@ -705,6 +782,19 @@ const AdminDashboard = () => {
                         {formatDate(
                           getDate(report)
                         )}
+                      </div>
+
+                      <div>
+                        <strong>
+                          Community Urgency:
+                        </strong>{" "}
+                        <span className={Number(report.upvotes || 0) >= 2 ? "badge-bold-hot" : "badge-bold-normal"}>
+                          {Number(report.upvotes || 0) >= 2
+                            ? `🔥 High Priority (${report.upvotes} Citizens Affected)`
+                            : Number(report.upvotes) === 1
+                            ? "👥 1 Citizen Affected"
+                            : "Standard Triage (0 Upvotes)"}
+                        </span>
                       </div>
 
                       {(report.department ||
@@ -784,6 +874,15 @@ const AdminDashboard = () => {
                           </span>
                         )}
 
+                        <button
+                          type="button"
+                          className="btn-card-pdf"
+                          onClick={() => exportReportPDF(report, user)}
+                          title="Download official PDF receipt with unique tracking ID"
+                          style={{ marginLeft: "auto" }}
+                        >
+                          <span>📄</span> PDF Receipt
+                        </button>
                       </div>
 
                     </div>

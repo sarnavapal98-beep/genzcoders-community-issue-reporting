@@ -180,5 +180,38 @@ ON reports(date_submitted);
 
 
 -- =========================================================
+-- UPVOTES (COMMUNITY ISSUE ENDORSEMENT)
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS upvotes (
+    UpvoteID INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    ReportID INTEGER NOT NULL,
+
+    CitizenID INTEGER NOT NULL,
+
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE(ReportID, CitizenID),
+
+    FOREIGN KEY (ReportID)
+        REFERENCES reports(ReportID)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (CitizenID)
+        REFERENCES citizens(CitizenID)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_upvotes_report
+ON upvotes(ReportID);
+
+CREATE INDEX IF NOT EXISTS idx_upvotes_citizen
+ON upvotes(CitizenID);
+
+
+-- =========================================================
 -- END OF SCHEMA
 -- =========================================================

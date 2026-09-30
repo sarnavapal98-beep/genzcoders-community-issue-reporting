@@ -1,8 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { getMyReports } from "../api";
+import { useAuth } from "../AuthContext.jsx";
+import { exportReportPDF, formatTrackingId } from "../utils/pdfGenerator.js";
 
 const MyReports = () => {
+  const { user } = useAuth();
+  const [copiedId, setCopiedId] = useState(null);
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -114,11 +118,11 @@ const MyReports = () => {
       return photo;
     }
 
-    if (photo.startsWith("/")) {
-      return photo;
+    const cleanPath = photo.startsWith("/") ? photo : `/${photo}`;
+    if (typeof window !== "undefined" && window.location.port === "5500") {
+      return `http://127.0.0.1:5000${cleanPath}`;
     }
-
-    return `/${photo}`;
+    return cleanPath;
   };
 
   const formatDate = (dateValue) => {
@@ -203,9 +207,8 @@ const MyReports = () => {
         .toString()
         .toLowerCase();
 
-      const reportId = getReportId(report)
-        ?.toString()
-        .toLowerCase() || "";
+      const rawId = getReportId(report)?.toString() || "";
+      const trackingId = formatTrackingId(report).toLowerCase();
 
       const status = (
         report.status ||
@@ -221,7 +224,9 @@ const MyReports = () => {
         category.includes(search) ||
         description.includes(search) ||
         location.includes(search) ||
-        reportId.includes(search);
+        rawId === search ||
+        `rep-${rawId}`.includes(search) ||
+        trackingId.includes(search);
 
       const matchesStatus =
         statusFilter === "all" ||
@@ -279,9 +284,14 @@ const MyReports = () => {
           </p>
         </div>
 
-        <Link to="/report" className="btn btn-primary">
-          + Report New Issue
-        </Link>
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <Link to="/community-reports" className="btn btn-secondary">
+            🌐 View All Community Reports
+          </Link>
+          <Link to="/report" className="btn btn-primary">
+            + Report New Issue
+          </Link>
+        </div>
       </div>
 
       {/* Error */}
@@ -328,7 +338,7 @@ const MyReports = () => {
             <div className="filter-search">
               <input
                 type="text"
-                placeholder="Search reports by ID, category, description or location..."
+                placeholder="Search reports by Unique Tracking ID (e.g. REP-2026-00005, #5), category, description..."
                 value={searchTerm}
                 onChange={(event) =>
                   setSearchTerm(event.target.value)
@@ -457,17 +467,43 @@ const MyReports = () => {
 
                     {/* Content */}
                     <div className="report-card-content">
+                      {/* Prominent Unique Tracking ID Header */}
+                      <div className="card-tracking-header">
+                        <div className="tracking-id-pill" title="Official Unique Tracking ID">
+                          <span className="tracking-icon">🏷️</span>
+                          <span className="tracking-num">{formatTrackingId(report)}</span>
+                          <button
+                            type="button"
+                            className="btn-copy-mini"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigator.clipboard.writeText(formatTrackingId(report));
+                              setCopiedId(reportId);
+                              setTimeout(() => setCopiedId(null), 2000);
+                            }}
+                            title="Copy Unique Tracking ID"
+                          >
+                            {copiedId === reportId ? "✓ Copied" : "Copy ID"}
+                          </button>
+                        </div>
+                        <div className="tracking-right-meta">
+                          {Number(report.upvotes || 0) > 0 && (
+                            <span
+                              className={`priority-flag-pill ${Number(report.upvotes) >= 2 ? "high-priority" : ""}`}
+                              title={`${report.upvotes} community members also confirmed having this issue`}
+                            >
+                              {Number(report.upvotes) >= 2 ? "🔥 High Priority" : "👥 Endorsed"} ({report.upvotes})
+                            </span>
+                          )}
+                          <span className="report-ref-badge">#REP-{reportId}</span>
+                        </div>
+                      </div>
+
                       <div className="report-card-top">
                         <div>
                           <span className="report-category">
                             {category}
                           </span>
-
-                          {reportId && (
-                            <span className="report-id">
-                              Report #{reportId}
-                            </span>
-                          )}
                         </div>
 
                         <span
@@ -522,6 +558,21 @@ const MyReports = () => {
                           </span>
                         </div>
                       )}
+
+                      {/* Community Support */}
+                      <div className="report-card-detail">
+                        <span className="detail-label">
+                          Community Support
+                        </span>
+
+                        <span className={Number(report.upvotes || 0) >= 2 ? "badge-bold-hot" : ""}>
+                          {Number(report.upvotes || 0) === 0
+                            ? "0 community upvotes yet"
+                            : Number(report.upvotes) === 1
+                            ? "👥 1 neighbor confirmed this issue"
+                            : `🔥 ${report.upvotes} neighbors confirmed • Prioritized for city response`}
+                        </span>
+                      </div>
 
                       {/* Status Timeline */}
                       <div className="status-timeline">
@@ -580,6 +631,18 @@ const MyReports = () => {
                           <span className="timeline-dot"></span>
                           <span>Resolved</span>
                         </div>
+                      </div>
+
+                      {/* Card Action: Download PDF Summary */}
+                      <div className="report-card-action-bar">
+                        <button
+                          type="button"
+                          className="btn-card-pdf"
+                          onClick={() => exportReportPDF(report, user)}
+                          title="Download official PDF summary with unique tracking ID"
+                        >
+                          <span>📄</span> Download PDF Summary
+                        </button>
                       </div>
                     </div>
                   </div>

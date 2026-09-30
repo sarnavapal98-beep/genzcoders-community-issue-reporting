@@ -9,7 +9,14 @@ import {
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    try {
+      const raw = localStorage.getItem("community_user");
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(true);
 
   /*
@@ -26,11 +33,19 @@ export const AuthProvider = ({ children }) => {
 
       if (response.data && response.data.user) {
         setUser(response.data.user);
+        try {
+          localStorage.setItem("community_user", JSON.stringify(response.data.user));
+        } catch (e) {}
       } else {
         setUser(null);
+        localStorage.removeItem("community_user");
       }
     } catch (error) {
-      setUser(null);
+      if (error.response?.status === 401) {
+        setUser(null);
+        localStorage.removeItem("community_user");
+      }
+      // If it's a network error or offline, keep existing state so user is not locked out
     } finally {
       setLoading(false);
     }
@@ -42,9 +57,9 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const response = await loginUser({
-  email,
-  password,
-});
+        email,
+        password,
+      });
 
       const data = response.data;
 
@@ -57,6 +72,9 @@ export const AuthProvider = ({ children }) => {
       }
 
       setUser(data.user);
+      try {
+        localStorage.setItem("community_user", JSON.stringify(data.user));
+      } catch (e) {}
 
       return {
         success: true,
@@ -93,6 +111,9 @@ export const AuthProvider = ({ children }) => {
        */
       if (data.user) {
         setUser(data.user);
+        try {
+          localStorage.setItem("community_user", JSON.stringify(data.user));
+        } catch (e) {}
       }
 
       return {
@@ -122,6 +143,7 @@ export const AuthProvider = ({ children }) => {
        * remove the frontend session.
        */
     } finally {
+      localStorage.removeItem("community_user");
       setUser(null);
     }
   };

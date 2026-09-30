@@ -156,9 +156,21 @@ def seed_default_data():
                     )
                 )
 
+        # Seed default administrator if not present
+        from werkzeug.security import generate_password_hash
+        cursor.execute("SELECT CitizenID FROM citizens WHERE email = ?", ("admin@community.local",))
+        if not cursor.fetchone():
+            cursor.execute(
+                """
+                INSERT INTO citizens (name, contact_info, email, password_hash, role)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                ("Civic Administrator", "555-0100", "admin@community.local", generate_password_hash("admin123"), "admin")
+            )
+
         connection.commit()
 
-        print("Default departments and categories inserted.")
+        print("Default departments, categories, and admin account inserted.")
 
     finally:
         connection.close()

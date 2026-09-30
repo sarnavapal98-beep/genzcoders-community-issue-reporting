@@ -5,6 +5,7 @@ import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import ReportIssue from "./pages/ReportIssue.jsx";
 import MyReports from "./pages/MyReports.jsx";
+import CommunityReports from "./pages/CommunityReports.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 
 const LoadingScreen = () => (
@@ -57,26 +58,46 @@ const AppShell = ({ children }) => {
         </NavLink>
 
         <nav className="navbar-links" aria-label="Main navigation">
-          <NavLink to="/report" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
-            <span>＋</span> Report Issue
+          <NavLink to="/community-reports" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
+            <span>🌐</span> Community Feed
           </NavLink>
-          <NavLink to="/my-reports" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
-            <span>▣</span> My Reports
-          </NavLink>
-          {isAdmin && (
-            <NavLink to="/admin" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
-              <span>▦</span> Admin
+          {user ? (
+            <>
+              <NavLink to="/report" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
+                <span>＋</span> Report Issue
+              </NavLink>
+              <NavLink to="/my-reports" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
+                <span>▣</span> My Reports
+              </NavLink>
+              {isAdmin && (
+                <NavLink to="/admin" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
+                  <span>▦</span> Admin
+                </NavLink>
+              )}
+            </>
+          ) : (
+            <NavLink to="/report" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
+              <span>＋</span> Report Issue
             </NavLink>
           )}
         </nav>
 
         <div className="nav-user">
-          <div className="user-avatar">{(user?.name || "U").charAt(0).toUpperCase()}</div>
-          <div className="user-details">
-            <strong>{user?.name || "User"}</strong>
-            <span>{isAdmin ? user.role : "Citizen"}</span>
-          </div>
-          <button className="logout-button" onClick={handleLogout}>Sign out</button>
+          {user ? (
+            <>
+              <div className="user-avatar">{(user?.name || "U").charAt(0).toUpperCase()}</div>
+              <div className="user-details">
+                <strong>{user?.name || "User"}</strong>
+                <span>{isAdmin ? user.role : "Citizen"}</span>
+              </div>
+              <button className="logout-button" onClick={handleLogout}>Sign out</button>
+            </>
+          ) : (
+            <div className="nav-guest-actions" style={{ display: "flex", gap: "8px" }}>
+              <NavLink to="/login" className="btn btn-secondary btn-sm" style={{ padding: "6px 14px", fontSize: "12px" }}>Sign In</NavLink>
+              <NavLink to="/register" className="btn btn-primary btn-sm" style={{ padding: "6px 14px", fontSize: "12px" }}>Register</NavLink>
+            </div>
+          )}
         </div>
       </header>
 
@@ -94,12 +115,13 @@ const ProtectedPage = ({ children, admin = false }) => {
 
 const App = () => (
   <Routes>
+    <Route path="/" element={<Login />} />
     <Route path="/login" element={<Login />} />
     <Route path="/register" element={<Register />} />
+    <Route path="/community-reports" element={<ProtectedPage><CommunityReports /></ProtectedPage>} />
     <Route path="/report" element={<ProtectedPage><ReportIssue /></ProtectedPage>} />
     <Route path="/my-reports" element={<ProtectedPage><MyReports /></ProtectedPage>} />
     <Route path="/admin" element={<ProtectedPage admin><AdminDashboard /></ProtectedPage>} />
-    <Route path="/" element={<Navigate to="/report" replace />} />
     <Route path="*" element={<Navigate to="/" replace />} />
   </Routes>
 );
